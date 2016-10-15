@@ -15,3 +15,5 @@ When the round starts Terrorists are unable to see, or hear Counterterrorists. O
 #####Restrictions (Other):
 
 - When disabling the plugin you have to reload the map because any available bombzones get removed, and a new global one is spawned.
+
+Post on the Alliedmods forum: https://forums.alliedmods.net/showthread.php?p=2462443
