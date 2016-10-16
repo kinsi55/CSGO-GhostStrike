@@ -3,7 +3,20 @@ Simple concept for a custom [CS:GO](http://store.steampowered.com/app/730/?l=ger
 
 It is tested, and meant to be played 5v5, so a normal "competitive" base.
 
+#####Summary:
+
 When the round starts Terrorists are unable to see, or hear Counterterrorists. On the other hand, Counterterrorists are unable to attack in any way. 40 seconds after the round has started a random Terrorist will be given a bomb, which he then can proceed to plant anywhere on the map. As soon as the bomb is planted Counterterrorists become visible to the Terrorists, and are able to Attack. After that its normal Counter-Strike with the aim to defuse the bomb.
+
+#####Cvars:
+
+- **ghoststrike_enable** - Enables/disables GhostStrike.
+- **ghoststrike_autodisable** - Automatically disable the gamemode on Intermission (Game end)
+- **ghoststrike_block_invisible_damage** - Block damage dealt to invisible counterterrorists
+- **ghoststrike_allow_trolling** - Allow invisible Counter Terrorists to show themselves while holding R(Reload)
+- **ghoststrike_block_all_invisible_sounds** - Block all Sounds created by invisible terrorists (Not just steps, but jumps etc as well)
+- **ghoststrike_c4timer** - This value is piped into the mp_c4timer cvar when the gamemode is enabled
+- **ghoststrike_show_bomb_guidelines** - Draw a Line from every Counterterrorist to the bomb when it is planted
+- **ghoststrike_bomb_delay** - The Delay in seconds after the roundstart when the bomb will be given out
 
 #####Restrictions (Per concept):
 
