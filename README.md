@@ -12,8 +12,4 @@ When the round starts Terrorists are unable to see, or hear Counterterrorists. O
 - Invisible Counterterrorists can still be hit by the Terrorists. This just adds more fun and thrill to the whole thing because it becomes a spamfest and you have to avoid getting killed before Terrorits plant the bomb (Cvar changeable).
 - Terrorists are able to bounce into the invisible Counterterrorists, and see blood decals caused by damaging them. Again, this adds more fun and thrill to the game.
 
-#####Restrictions (Other):
-
-- When disabling the plugin you have to reload the map because any available bombzones get removed, and a new global one is spawned.
-
 Post on the Alliedmods forum: https://forums.alliedmods.net/showthread.php?p=2462443
