@@ -5,7 +5,7 @@
 #include <sdkhooks>
 #include <sdktools>
 
-#define PLUGIN_VERSION "1.0.3"
+#define PLUGIN_VERSION "1.0.4"
 
 public Plugin:myinfo = {
 	name = "GhostStrike",
@@ -86,7 +86,7 @@ public OnPluginStart() {
 	blockInvisibleDamage = GetConVarInt(g_hBlockInvisibleDamage) ? true : false;
 	allowTrolling = GetConVarInt(g_hAllowTrolling) ? true : false;
 	blockAllInvisibleSounds = GetConVarInt(g_hBlockAllInvisibleSounds) ? true : false;
-	bombGiveDelay = GetConVarInt(g_hDrawBombLine);
+	bombGiveDelay = GetConVarInt(g_hBombGiveDelay);
 	c4TimerTarget = GetConVarInt(g_hC4Timer);
 	drawBombGuideLines = GetConVarInt(g_hDrawBombLine) ? true : false;
 }
@@ -95,8 +95,7 @@ public OnSettingsChange(Handle:cvar, const String:oldvalue[], const String:newva
 	if(cvar == g_hEnabled){
 		new bool:newState = StringToInt(newvalue) ? true : false;
 
-		if(active != newState && newState) init();
-		if(!newState) active = newState;
+		if(active != newState && newState && (active = newState)) init();
 	}else if(cvar == g_hDisableOnEnd){
 		disableOnIntermission = StringToInt(newvalue) ? true : false;
 	}else if(cvar == g_hBlockInvisibleDamage){
@@ -141,10 +140,10 @@ public Action:OnNormalSoundPlayed(clients[64], &numClients, String:sample[PLATFO
 }
 
 public OnMapStart() {
+	PrecacheModel("models/props/cs_office/vending_machine.mdl", true);
+
 	inited = false; //Need to re-init on Mapchange
 	if(active) init();
-
-	PrecacheModel("models/props/cs_office/vending_machine.mdl", true);
 
 	//Allows for Hot-Reloading of the plugin
 	for(new i = 1; i <= MaxClients; i++)
@@ -166,6 +165,8 @@ public Event_RoundStart(Handle:event, const String:name[], bool:dontBroadcast) {
 
 			CGOPrintToChat(i, "[{GREEN}GhostStrike{DEFAULT}] You{RED} can't{DEFAULT} shoot until the bomb has been planted!%s",
 				!blockAllInvisibleSounds ? " While steps are inaudible, any other sounds (e.g. Jumps) are{RED} not{DEFAULT}!" : " Any Sound produced by you{GREEN} can't{DEFAULT} be heard by the Terrorists.");
+
+			if(allowTrolling) CGOPrintToChat(i, "[{GREEN}GhostStrike{DEFAULT}] While you are invisible you can show yourself to the Terrorists by holding the reload key.");
 
 			//Prevent the client from Attacking
 			SetEntPropFloat(i, Prop_Send, "m_flNextAttack", 99999999.0);
@@ -199,16 +200,16 @@ public Action:Hook_SetTransmit(entity, client) {
 	return Plugin_Continue;
 }
 
-public Action OnPlayerRunCmd(client, &buttons, &impulse, Float:vel[3], Float:angles[3], &weapon, &subtype, &cmdnum, &tickcount, &seed, mouse[2]){
-	if(!active || isWarmup || allowTrolling)
+public Action:OnPlayerRunCmd(client, &buttons, &impulse, Float:vel[3], Float:angles[3], &weapon, &subtype, &cmdnum, &tickcount, &seed, mouse[2]){
+	if(!active || isWarmup || !allowTrolling)
 		return Plugin_Continue;
 
 	if(IsValidClient(client) && GetClientTeam(client) == CS_TEAM_CT){
 		new bool:shouldUnhide = !isPlanted && buttons & IN_RELOAD;
 		if(shouldUnhide != unhideCT[client]){
 			if(shouldUnhide)
-				PrintHintText(client, "<font color='#00ff00'>You are now Visible to the Terrorists</font>!");
-			else PrintHintText(client, "<font color='#ff0000'>You are invisible again</font>!");
+				PrintHintText(client, "<font color='#00ff00'>You are now visible to the Terrorists</font>!");
+			else if(!isPlanted) PrintHintText(client, "<font color='#ff0000'>You are invisible again</font>!");
 
 			unhideCT[client] = shouldUnhide;
 		}
@@ -284,9 +285,11 @@ public Event_BombPlanted(Handle:event, const String:name[], bool:dontBroadcast) 
 			//Allow CT's to shoot as soon as the bomb is planted.
 			SetEntPropFloat(i, Prop_Send, "m_flNextAttack", 0.0);
 
+			// PrintHintText(i, "<font color='#ffff00'>You are now visible to the Terrorists and can attack!</font>!");
+
 			if(c4 != -1)
 				//Delay Beam otherwise game might crash because Source.
-				CreateTimer(0.0, DelayedUserNotif, i);
+				CreateTimer(0.1, DelayedUserNotif, i);
 		}
 	}
 }
@@ -359,7 +362,6 @@ public init() {
 
 		SetEntProp(ent, Prop_Send, "m_fEffects", GetEntProp(ent, Prop_Send, "m_fEffects") | EF_NODRAW);
 
-		active = true;
 		inited = true;
 
 		ServerCommand("mp_give_player_c4 0");
