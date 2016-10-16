@@ -6,7 +6,7 @@
 #include <sdktools>
 #pragma newdecls required
 
-#define PLUGIN_VERSION "1.1.0"
+#define PLUGIN_VERSION "1.1.1"
 
 public Plugin myinfo = {
 	name = "GhostStrike",
@@ -328,7 +328,7 @@ public Action DelayedUserNotif(Handle timer, int client) {
 }
 
 public void OnPlayerSpawn(Handle event, const char[] name, bool dontBroadcast) {
-	if(active || isWarmup) {
+	if(active && !isWarmup) {
 		int client = GetClientOfUserId(GetEventInt(event, "userid"));
 		//Setting the collision mode to Pushaway. This allows for "bouncy" collisions,
 		//as well as prevents people from boosting into difficult to reach spots
