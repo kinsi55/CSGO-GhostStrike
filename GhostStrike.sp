@@ -95,7 +95,7 @@ public OnSettingsChange(Handle:cvar, const String:oldvalue[], const String:newva
 	if(cvar == g_hEnabled){
 		new bool:newState = StringToInt(newvalue) ? true : false;
 
-		if(active != newState && newState && (active = newState)) init();
+		if(active != newState && (active = newState) && newState) init();
 	}else if(cvar == g_hDisableOnEnd){
 		disableOnIntermission = StringToInt(newvalue) ? true : false;
 	}else if(cvar == g_hBlockInvisibleDamage){
