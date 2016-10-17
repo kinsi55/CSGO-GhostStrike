@@ -6,7 +6,7 @@
 #include <sdktools>
 #pragma newdecls required
 
-#define PLUGIN_VERSION "1.1.1"
+#define PLUGIN_VERSION "1.1.2"
 
 public Plugin myinfo = {
 	name = "GhostStrike",
@@ -160,7 +160,9 @@ public Action OnNormalSoundPlayed(int clients[MAXPLAYERS], int &numClients, char
 
 public void OnMapStart() {
 	PrecacheModel("models/props/cs_office/vending_machine.mdl", true);
+}
 
+public void OnConfigsExecuted(){
 	if(active) init();
 }
 
@@ -334,12 +336,16 @@ public void OnPlayerSpawn(Handle event, const char[] name, bool dontBroadcast) {
 		//as well as prevents people from boosting into difficult to reach spots
 		SetEntProp(client, Prop_Data, "m_CollisionGroup", COLLISION_GROUP_PUSHAWAY);
 
-		//Juuuust to be sure.
-		int C4 = GetPlayerWeaponSlot(client, CS_SLOT_C4);
-		if(C4 > MaxClients && IsValidEntity(C4)) {
-			CS_DropWeapon(client, C4, false, true);
-			AcceptEntityInput(C4, "kill");
-		}
+		CreateTimer(0.1, DelayedBombRemoval, client);
+	}
+}
+
+public Action DelayedBombRemoval(Handle timer, int client) {
+	//Juuuust to be sure.
+	int C4 = GetPlayerWeaponSlot(client, CS_SLOT_C4);
+	if(C4 > MaxClients && IsValidEntity(C4)) {
+		CS_DropWeapon(client, C4, false, true);
+		AcceptEntityInput(C4, "kill");
 	}
 }
 
