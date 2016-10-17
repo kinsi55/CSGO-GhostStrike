@@ -6,7 +6,7 @@
 #include <sdktools>
 #pragma newdecls required
 
-#define PLUGIN_VERSION "1.1.3"
+#define PLUGIN_VERSION "1.1.4"
 
 public Plugin myinfo = {
 	name = "GhostStrike",
@@ -97,12 +97,13 @@ public void OnPluginStart() {
 		if(IsValidClient(i)) OnClientPutInServer(i);
 }
 
-public void OnPluginEnd(){
+public void OnPluginEnd() {
 	//Kill the possibly available global bombzone on Unload
 	if(IsValidEntity(g_bombZoneEnt)) AcceptEntityInput(g_bombZoneEnt, "Kill");
+	g_bombZoneEnt = -1;
 }
 
-public void OnMapEnd(){
+public void OnMapEnd() {
 	if(IsValidEntity(g_bombZoneEnt)) AcceptEntityInput(g_bombZoneEnt, "Kill");
 	g_bombZoneEnt = -1;
 }
@@ -115,8 +116,9 @@ public void OnSettingsChange(ConVar cvar, const char[] oldvalue, const char[] ne
 			//Call Init on Enable
 			if(newState) init();
 			//Remove the Global Bombzone on Disable
-			else if(IsValidEntity(g_bombZoneEnt)){
-				AcceptEntityInput(g_bombZoneEnt, "Kill");
+			else{
+				if(IsValidEntity(g_bombZoneEnt)) AcceptEntityInput(g_bombZoneEnt, "Kill");
+				g_bombZoneEnt = -1;
 			}
 		}
 	} else if(cvar == g_hDisableOnEnd) {
