@@ -6,7 +6,7 @@
 #include <sdktools>
 #pragma newdecls required
 
-#define PLUGIN_VERSION "1.1.4"
+#define PLUGIN_VERSION "1.1.5"
 
 public Plugin myinfo = {
 	name = "GhostStrike",
@@ -20,7 +20,7 @@ public Plugin myinfo = {
 #define SOLID_BBOX								2	// an AABB
 #define EF_NODRAW									1 << 5
 
-int BeamModelIndex;
+int BeamModelIndex = -1;
 int g_bombZoneEnt = -1;
 
 //Game States
@@ -50,8 +50,6 @@ ConVar g_hC4Timer = null;
 ConVar g_hDrawBombLine = null;
 
 public void OnPluginStart() {
-	BeamModelIndex = PrecacheModel("materials/sprites/laserbeam.vmt", true);
-
 	HookEvent("round_start", Event_RoundStart);
 	HookEvent("bomb_planted", Event_BombPlanted, EventHookMode_PostNoCopy);
 	HookEvent("cs_intermission", Event_Intermission, EventHookMode_PostNoCopy);
@@ -167,6 +165,8 @@ public Action OnNormalSoundPlayed(int clients[MAXPLAYERS], int &numClients, char
 
 public void OnMapStart() {
 	PrecacheModel("models/props/cs_office/vending_machine.mdl", true);
+
+	BeamModelIndex = PrecacheModel("materials/sprites/laserbeam.vmt", true);
 }
 
 public void OnConfigsExecuted(){
