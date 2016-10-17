@@ -343,11 +343,12 @@ public void OnPlayerSpawn(Handle event, const char[] name, bool dontBroadcast) {
 		//as well as prevents people from boosting into difficult to reach spots
 		SetEntProp(client, Prop_Data, "m_CollisionGroup", COLLISION_GROUP_PUSHAWAY);
 
-		CreateTimer(0.1, DelayedBombRemoval, client);
+		CreateTimer(1.0, DelayedBombRemoval, client);
 	}
 }
 
 public Action DelayedBombRemoval(Handle timer, int client) {
+	if(!IsValidClient(client)) return;
 	//Juuuust to be sure.
 	int C4 = GetPlayerWeaponSlot(client, CS_SLOT_C4);
 	if(C4 > MaxClients && IsValidEntity(C4)) {
