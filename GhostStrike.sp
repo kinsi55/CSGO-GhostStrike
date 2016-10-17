@@ -6,7 +6,7 @@
 #include <sdktools>
 #pragma newdecls required
 
-#define PLUGIN_VERSION "1.1.5"
+#define PLUGIN_VERSION "1.1.6"
 
 public Plugin myinfo = {
 	name = "GhostStrike",
@@ -81,7 +81,8 @@ public void OnPluginStart() {
 	AutoExecConfig(true, "ghoststrike");
 
 	//Read Cvar values on Load
-	active = g_hEnabled.BoolValue;
+	if(g_hEnabled.BoolValue) OnSettingsChange(g_hEnabled, "", "1");
+
 	disableOnIntermission = g_hDisableOnEnd.BoolValue;
 	blockInvisibleDamage = g_hBlockInvisibleDamage.BoolValue;
 	allowTrolling = g_hAllowTrolling.BoolValue;
@@ -389,7 +390,7 @@ public void init() {
 		LogMessage("Initialized on current Map");
 	} else {
 		LogError("Could not Init because spawning the global Bombzone failed!");
-		active = false;
+		g_hEnabled.SetBool(false);
 	}
 }
 
