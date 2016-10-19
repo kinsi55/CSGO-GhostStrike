@@ -147,7 +147,7 @@ public Action OnNormalSoundPlayed(int clients[MAXPLAYERS], int &numClients, char
 		return Plugin_Continue;
 
 	//Only block footsteps. Landing sounds are still supposed to be played per concept.
-	if(IsValidClient(entity) && GetClientTeam(entity) == CS_TEAM_CT && (blockAllInvisibleSounds || StrContains(sample, "footsteps") != -1)) {
+	if(IsValidClient(entity) && GetClientTeam(entity) == CS_TEAM_CT && !unhideCT[entity] && (blockAllInvisibleSounds || StrContains(sample, "footsteps") != -1)) {
 		int ClientArrayIndex = 0;
 
 		for(int i = 0; i < numClients; i++) {
