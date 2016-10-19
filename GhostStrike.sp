@@ -6,7 +6,7 @@
 #include <sdktools>
 #pragma newdecls required
 
-#define PLUGIN_VERSION "1.1.6"
+#define PLUGIN_VERSION "1.1.7"
 
 public Plugin myinfo = {
 	name = "GhostStrike",
@@ -147,11 +147,11 @@ public Action OnNormalSoundPlayed(int clients[MAXPLAYERS], int &numClients, char
 		return Plugin_Continue;
 
 	//Only block footsteps. Landing sounds are still supposed to be played per concept.
-	if(IsValidClient(entity) && GetClientTeam(entity) == CS_TEAM_CT && (blockAllInvisibleSounds || StrContains(sample, "footsteps") == -1)) {
+	if(IsValidClient(entity) && GetClientTeam(entity) == CS_TEAM_CT && (blockAllInvisibleSounds || StrContains(sample, "footsteps") != -1)) {
 		int ClientArrayIndex = 0;
 
 		for(int i = 0; i < numClients; i++) {
-			if(IsValidClient(clients[i]) && GetClientTeam(clients[i]) == CS_TEAM_CT)
+			if(IsValidClient(clients[i]) && GetClientTeam(clients[i]) != CS_TEAM_T)
 				clients[ClientArrayIndex++] = clients[i];
 		}
 
@@ -174,10 +174,10 @@ public void OnConfigsExecuted(){
 	if(active) init();
 }
 
-public Action Event_RoundStart(Handle event, const char[] name, bool dontBroadcast) {
+public Action Event_RoundStart(Event event, const char[] name, bool dontBroadcast) {
 	//When the Timelimit is 999 it (apparently) means, warmup.
 	//Please do not set a roundtime of 999 Seconds, or if you read this and know better, tell me :^)
-	if(!active || (isWarmup = GetEventInt(event, "timelimit") == 999)) return;
+	if(!active || (isWarmup = event.GetInt("timelimit") == 999)) return;
 
 	isPlanted = false;
 	bombGiveTimer = bombGiveDelay;
@@ -337,9 +337,9 @@ public Action DelayedUserNotif(Handle timer, int client) {
 	}
 }
 
-public void OnPlayerSpawn(Handle event, const char[] name, bool dontBroadcast) {
+public void OnPlayerSpawn(Event event, const char[] name, bool dontBroadcast) {
 	if(active && !isWarmup) {
-		int client = GetClientOfUserId(GetEventInt(event, "userid"));
+		int client = GetClientOfUserId(event.GetInt("userid"));
 		//Setting the collision mode to Pushaway. This allows for "bouncy" collisions,
 		//as well as prevents people from boosting into difficult to reach spots
 		SetEntProp(client, Prop_Data, "m_CollisionGroup", COLLISION_GROUP_PUSHAWAY);
