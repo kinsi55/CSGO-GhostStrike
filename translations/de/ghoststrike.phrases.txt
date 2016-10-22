@@ -1,0 +1,64 @@
+"Phrases"
+{
+	"Trolling_NowVisible"
+	{
+		"en" "<font color='#00ff00'>Du bist nun sichtbar für die Terroristen!</font>"
+	}
+
+	"Trolling_NowHidden"
+	{
+		"en" "<font color='#ff0000'>Du bist wieder unsichtbar!</font>"
+	}
+
+	"Bomb_DeployIn"
+	{
+		"#format" "{1:i}"
+		"en" "Ein zufälliger Terrorist erhält in <font color='#edda74'>{1} Sekunde(n)</font> die Bombe!"
+	}
+
+	"Bomb_ReceivedBy"
+	{
+		//name has received the bomb
+		"en" "hat die bombe erhalten"
+	}
+
+	"Instructions_CT_1_Not_Invincible"
+	{
+		"en" "Du bist{GREEN} unsichtbar{DEFAULT} und deine Schritte sind{GREEN} unhörbar{DEFAULT} für die{RED} Terroristen.{DEFAULT} Du bist nicht{RED} untreffbar{DEFAULT}."
+	}
+
+	"Instructions_CT_1_Invincible"
+	{
+		"en" "Du bist{GREEN} unsichtbar{DEFAULT} und deine Schritte sind{GREEN} unhörbar{DEFAULT} für die{RED} Terroristen.{DEFAULT} Du bist außerdem{GREEN} untreffbar{DEFAULT}."
+	}
+
+	"Instructions_CT_2_NoSteps"
+	{
+		"en" "Du kannst{RED} nicht{DEFAULT} schießen bis die Bombe gelegt wurde! Deine Schritte sind zwar unhöbar, andere Geräusche wie Sprünge hingegen{RED} nicht{DEFAULT}!"
+	}
+
+	"Instructions_CT_2_NoSounds"
+	{
+		"en" "Du kannst{RED} nicht{DEFAULT} schießen bis die Bombe gelegt wurde! Alle von dir produzierten Geräusche sind für die Terroristen{GREEN} unhörbar{DEFAULT}."
+	}
+
+	"Instructions_CT_TrollingAllowed"
+	{
+		"en" "So lange du unsichtbar bist kannst du dich den Terroristen zeigen indem du die Nachladen Taste hälst."
+	}
+
+	"Instructions_T_1_Not_Invincible"
+	{
+		"en" "Die{LIGHTBLUE} Antiterroreinheit{DEFAULT} ist{RED} unsichtbar{DEFAULT}, aber{GREEN} nicht untreffbar{DEFAULT} bis die Bombe gelegt wurde!"
+	}
+
+	"Instructions_T_1_Invincible"
+	{
+		"en" "Die{LIGHTBLUE} Antiterroreinheit{DEFAULT} ist{RED} unsichtbar{DEFAULT}, und{RED} untreffbar{DEFAULT} bis die Bombe gelegt wurde!"
+	}
+
+	"Instructions_T_2_BombPlant"
+	{
+		"en" "Du kannst die Bombe{GREEN} überall{DEFAULT} auf der Karte legen, beachte jedoch dass zu jeder Zeit ein{LIGHTBLUE} CT{RED} direkt neben dir sein könnte."
+	}
+}
