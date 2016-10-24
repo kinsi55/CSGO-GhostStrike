@@ -16,7 +16,8 @@ When the round starts Terrorists are unable to see, or hear Counterterrorists. O
 - **ghoststrike_block_all_invisible_sounds** - Block all Sounds created by invisible Countererrorists (Not just steps, but jumps etc as well)
 - **ghoststrike_c4timer** - This value is piped into the mp_c4timer cvar when the gamemode is enabled
 - **ghoststrike_show_bomb_guidelines** - Draw a Line from every Counterterrorist to the bomb when it is planted
-- **ghoststrike_bomb_delay** - The Delay in seconds after the roundstart when the bomb will be given out
+- **ghoststrike_bomb_delay** - The delay in seconds after the roundstart when the bomb will be given out
+- **ghoststrike_full_noblock** - If full noblock should be active instead of using bouncy collisions
 
 #####Restrictions (Per concept):
 
