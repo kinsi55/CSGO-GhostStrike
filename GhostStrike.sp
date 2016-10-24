@@ -6,7 +6,7 @@
 #include <sdktools>
 #pragma newdecls required
 
-#define PLUGIN_VERSION "1.2.0"
+#define PLUGIN_VERSION "1.2.1"
 
 public Plugin myinfo = {
 	name = "GhostStrike",
@@ -17,6 +17,8 @@ public Plugin myinfo = {
 }
 
 #define COLLISION_GROUP_PUSHAWAY	17	// Nonsolid on client and server, pushaway in player code
+#define COLLISION_GROUP_DEBRIS_TRIGGER		2	// Same as debris, but hits triggers
+#define COLLISION_GROUP_PLAYER				5
 #define SOLID_BBOX								2	// an AABB
 #define EF_NODRAW									1 << 5
 
@@ -41,6 +43,7 @@ ConVar g_hBlockAllInvisibleSounds = null;
 ConVar g_hBombGiveDelay = null;
 ConVar g_hC4Timer = null;
 ConVar g_hDrawBombLine = null;
+ConVar g_hFullNoblock = null;
 
 public void OnPluginStart() {
 	HookEvent("round_start", Event_RoundStart);
@@ -65,6 +68,7 @@ public void OnPluginStart() {
 	g_hC4Timer = CreateConVar("ghoststrike_c4timer", "60", "This value is piped into the mp_c4timer cvar when the gamemode is enabled", FCVAR_NONE, true, 10.0);
 	g_hDrawBombLine = CreateConVar("ghoststrike_show_bomb_guidelines", "1", "Draw a Line from every Counterterrorist to the bomb when it is planted", FCVAR_NONE, true, 0.0, true, 1.0);
 	g_hBombGiveDelay = CreateConVar("ghoststrike_bomb_delay", "30", "The Delay in seconds after the roundstart when the bomb will be given out", FCVAR_NONE, true, 20.0, true, 60.0);
+	g_hFullNoblock = CreateConVar("ghoststrike_full_noblock", "0", "If full noblock should be active instead of using bouncy collisions", FCVAR_NONE, true, 0.0, true, 1.0);
 
 	AutoExecConfig(true, "ghoststrike");
 
@@ -79,13 +83,10 @@ public void OnPluginStart() {
 }
 
 public void OnPluginEnd() {
-	//Kill the possibly available global bombzone on Unload
-	if(IsValidEntity(g_bombZoneEnt)) AcceptEntityInput(g_bombZoneEnt, "Kill");
-	g_bombZoneEnt = -1;
+	EnableCvarChange(g_hEnabled, "", "0");
 }
 
 public void OnMapEnd() {
-	if(IsValidEntity(g_bombZoneEnt)) AcceptEntityInput(g_bombZoneEnt, "Kill");
 	g_bombZoneEnt = -1;
 }
 
@@ -99,6 +100,14 @@ public void EnableCvarChange(ConVar cvar, const char[] oldvalue, const char[] ne
 		else{
 			if(IsValidEntity(g_bombZoneEnt)) AcceptEntityInput(g_bombZoneEnt, "Kill");
 			g_bombZoneEnt = -1;
+
+			//Make everyone fully opaque on disable
+			for(int i = 1; i < MaxClients; i++) {
+				if(IsValidClient(i)) {
+					SetEntityRenderColor(i, 255, 255, 255, 255);
+					SetEntProp(i, Prop_Data, "m_CollisionGroup", COLLISION_GROUP_PLAYER);
+				}
+			}
 		}
 	}
 }
@@ -107,7 +116,7 @@ public void Event_Intermission(Handle event, const char[] name, bool dontBroadca
 	if(g_hDisableOnEnd.BoolValue) g_hEnabled.SetBool(false);
 }
 
-public Action OnNormalSoundPlayed(int clients[MAXPLAYERS], int &numClients, char sample[PLATFORM_MAX_PATH], int &entity, int &channel, float &volume, int &level, int &pitch, int &flags, char soundEntry[PLATFORM_MAX_PATH], int &seed){
+public Action OnNormalSoundPlayed(int clients[MAXPLAYERS], int &numClients, char sample[PLATFORM_MAX_PATH], int &entity, int &channel, float &volume, int &level, int &pitch, int &flags, char soundEntry[PLATFORM_MAX_PATH], int &seed) {
 //public Action OnNormalSoundPlayed(int clients[64], int &numClients, char sample[PLATFORM_MAX_PATH], int &entity, int &channel, float &volume, int &level, int &pitch)
 	if(!active || isWarmup || isPlanted || entity < 1 || entity > 64)
 		return Plugin_Continue;
@@ -141,6 +150,7 @@ public void OnConfigsExecuted(){
 }
 
 public Action Event_RoundStart(Event event, const char[] name, bool dontBroadcast) {
+	bombGiveTimer = -1;
 	//When the Timelimit is 999 it (apparently) means, warmup.
 	//Please do not set a roundtime of 999 Seconds, or if you read this and know better, tell me :^)
 	if(!active || (isWarmup = event.GetInt("timelimit") == 999)) return;
@@ -174,7 +184,7 @@ public Action Event_FreezeTimeEnd(Event event, const char[] name, bool dontBroad
 	if(active) bombGiveTimer = g_hBombGiveDelay.IntValue;
 }
 
-public void OnClientDisconnect(int client){
+public void OnClientDisconnect(int client) {
 	unhideCT[client] = false;
 }
 
@@ -196,17 +206,16 @@ public Action Hook_SetTransmit(int entity, int client) {
 	return Plugin_Continue;
 }
 
-public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3], int &weapon, int &subtype, int &cmdnum, int &tickcount, int &seed, int mouse[2]){
+public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3], int &weapon, int &subtype, int &cmdnum, int &tickcount, int &seed, int mouse[2]) {
 	if(!active || isWarmup || !g_hAllowTrolling.BoolValue)
 		return Plugin_Continue;
 
-	if(IsValidClient(client) && GetClientTeam(client) == CS_TEAM_CT){
-		bool shouldUnhide = !isPlanted && buttons & IN_RELOAD;
-		if(shouldUnhide != unhideCT[client]){
+	if(IsValidClient(client) && GetClientTeam(client) == CS_TEAM_CT) {
+		bool shouldUnhide = !isPlanted && buttons & IN_RELOAD && IsPlayerAlive(client);
+		if(shouldUnhide != unhideCT[client]) {
 			if(shouldUnhide){
 				PrintHintText(client, "%T", "Trolling_NowVisible", client);
 				SetEntityRenderColor(client, 255, 255, 255, 255);
-
 			}else if(!isPlanted){
 				PrintHintText(client, "%T", "Trolling_NowHidden", client);
 				SetEntityRenderColor(client, 255, 255, 255, 100);
@@ -247,10 +256,10 @@ public Action Timer_RestrictNextAttack(Handle timer, int client) {
 }
 
 public Action OnSecond(Handle timer) {
-	if(bombGiveTimer > 0) {
+	if(active && !isWarmup && bombGiveTimer > 0) {
 		if(GetTeamClientCount(CS_TEAM_T) > 0)
 			PrintHintTextToAll("%T", "Bomb_DeployIn", LANG_SERVER, --bombGiveTimer);
-	} else if(bombGiveTimer == 0) {
+	} else if(active && bombGiveTimer == 0) {
 		int clientArray[MAXPLAYERS+1];
 		int clientArrayIndex = 0;
 		//Arrify all T Players
@@ -326,7 +335,7 @@ public void OnPlayerSpawn(Event event, const char[] name, bool dontBroadcast) {
 		int client = GetClientOfUserId(event.GetInt("userid"));
 		//Setting the collision mode to Pushaway. This allows for "bouncy" collisions,
 		//as well as prevents people from boosting into difficult to reach spots
-		SetEntProp(client, Prop_Data, "m_CollisionGroup", COLLISION_GROUP_PUSHAWAY);
+		SetEntProp(client, Prop_Data, "m_CollisionGroup", g_hFullNoblock.BoolValue ? COLLISION_GROUP_DEBRIS_TRIGGER : COLLISION_GROUP_PUSHAWAY);
 
 		if(GetClientTeam(client) == CS_TEAM_T){
 			CreateTimer(1.0, DelayedBombRemoval, client);
