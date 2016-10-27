@@ -12,7 +12,6 @@
 
 	"Bomb_DeployIn"
 	{
-		"#format" "{1:i}"
 		"es" "La bomba va a ser entregada a un terrorista aleatorio en <font color='#edda74'>{1} segundo(s)</font>!"
 	}
 
