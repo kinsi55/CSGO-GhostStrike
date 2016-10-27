@@ -24,7 +24,7 @@
 #include <sdktools>
 #pragma newdecls required
 
-#define PLUGIN_VERSION "1.2.1"
+#define PLUGIN_VERSION "1.2.2"
 
 public Plugin myinfo = {
 	name = "GhostStrike",
@@ -178,18 +178,18 @@ public Action Event_RoundStart(Event event, const char[] name, bool dontBroadcas
 
 	for(i = 1; i < MaxClients; i++) {
 		if(IsValidClient(i)) if(GetClientTeam(i) == CS_TEAM_CT) {
-			CGOPrintToChat(i, "[{GREEN}GhostStrike{DEFAULT}] %T", g_hBlockInvisibleDamage.BoolValue ? "Instructions_CT_1_Invincible" : "Instructions_CT_1_Not_Invincible", i);
+			CGOPrintToChat(i, "[{GREEN}GhostStrike{DEFAULT}] %t", g_hBlockInvisibleDamage.BoolValue ? "Instructions_CT_1_Invincible" : "Instructions_CT_1_Not_Invincible");
 
-			CGOPrintToChat(i, "[{GREEN}GhostStrike{DEFAULT}] %T", g_hBlockAllInvisibleSounds.BoolValue ? "Instructions_CT_2_NoSounds" : "Instructions_CT_2_NoSteps", i);
+			CGOPrintToChat(i, "[{GREEN}GhostStrike{DEFAULT}] %t", g_hBlockAllInvisibleSounds.BoolValue ? "Instructions_CT_2_NoSounds" : "Instructions_CT_2_NoSteps");
 
-			if(g_hAllowTrolling.BoolValue) CGOPrintToChat(i, "[{GREEN}GhostStrike{DEFAULT}] %T", "Instructions_CT_TrollingAllowed", i);
+			if(g_hAllowTrolling.BoolValue) CGOPrintToChat(i, "[{GREEN}GhostStrike{DEFAULT}] %t", "Instructions_CT_TrollingAllowed");
 
 			//Prevent the client from Attacking
 			SetEntPropFloat(i, Prop_Send, "m_flNextAttack", 99999999.0);
 		} else {
-			CGOPrintToChat(i, "[{GREEN}GhostStrike{DEFAULT}] %T", g_hBlockInvisibleDamage.BoolValue ? "Instructions_T_1_Invincible" : "Instructions_T_1_Not_Invincible", i);
+			CGOPrintToChat(i, "[{GREEN}GhostStrike{DEFAULT}] %t", g_hBlockInvisibleDamage.BoolValue ? "Instructions_T_1_Invincible" : "Instructions_T_1_Not_Invincible");
 
-			CGOPrintToChat(i, "[{GREEN}GhostStrike{DEFAULT}] %T", "Instructions_T_2_BombPlant", i);
+			CGOPrintToChat(i, "[{GREEN}GhostStrike{DEFAULT}] %t", "Instructions_T_2_BombPlant");
 		}
 	}
 
@@ -232,10 +232,10 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		bool shouldUnhide = !isPlanted && buttons & IN_RELOAD && IsPlayerAlive(client);
 		if(shouldUnhide != unhideCT[client]) {
 			if(shouldUnhide){
-				PrintHintText(client, "%T", "Trolling_NowVisible", client);
+				PrintHintText(client, "%t", "Trolling_NowVisible");
 				SetEntityRenderColor(client, 255, 255, 255, 255);
 			}else if(!isPlanted){
-				PrintHintText(client, "%T", "Trolling_NowHidden", client);
+				PrintHintText(client, "%t", "Trolling_NowHidden");
 				SetEntityRenderColor(client, 255, 255, 255, 100);
 			}
 
@@ -276,7 +276,7 @@ public Action Timer_RestrictNextAttack(Handle timer, int client) {
 public Action OnSecond(Handle timer) {
 	if(active && !isWarmup && bombGiveTimer > 0) {
 		if(GetTeamClientCount(CS_TEAM_T) > 0)
-			PrintHintTextToAll("%T", "Bomb_DeployIn", LANG_SERVER, --bombGiveTimer);
+			PrintHintTextToAll("%t", "Bomb_DeployIn", --bombGiveTimer);
 	} else if(active && bombGiveTimer == 0) {
 		int clientArray[MAXPLAYERS+1];
 		int clientArrayIndex = 0;
@@ -294,8 +294,8 @@ public Action OnSecond(Handle timer) {
 
 			Format(escapedName, sizeof(escapedName), "<font color='#ff0000'>%s</font>", escapedName);
 
-			PrintHintTextToAll("%s %T!", escapedName, "Bomb_ReceivedBy", LANG_SERVER);
-			CGOPrintToChatAll("[{GREEN}GhostStrike{DEFAULT}]{RED} %N{DEFAULT} %T!", clientArrayIndex, "Bomb_ReceivedBy", LANG_SERVER);
+			PrintHintTextToAll("%s %t!", escapedName, "Bomb_ReceivedBy");
+			CGOPrintToChatAll("[{GREEN}GhostStrike{DEFAULT}]{RED} %N{DEFAULT} %t!", clientArrayIndex, "Bomb_ReceivedBy");
 
 			GivePlayerItem(clientArrayIndex, "weapon_c4");
 			bombGiveTimer = -1;
