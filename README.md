@@ -15,10 +15,9 @@ You should allow **Max 8v8**, anything above that becomes an unplayable game (Be
 
 #####Cvars:
 
-**ghoststrike_enable** - Enables/disables GhostStrike.
-
-**ghoststrike_autodisable** - Automatically disable the gamemode on Intermission (Game end)
-**ghoststrike_block_invisible_damage** - Block damage dealt to invisible counterterrorists
+**ghoststrike_enable** - Enables/disables GhostStrike.		
+**ghoststrike_autodisable** - Automatically disable the gamemode on Intermission (Game end)		
+**ghoststrike_block_invisible_damage** - Block damage dealt to invisible counterterrorists		
 **ghoststrike_allow_trolling** - Allow invisible Counter Terrorists to show themselves while holding R(Reload)		
 **ghoststrike_block_all_invisible_sounds** - Block all Sounds created by invisible Countererrorists (Not just steps, but jumps etc as well)		
 **ghoststrike_c4timer** - This value is piped into the mp_c4timer cvar when the gamemode is enabled		
