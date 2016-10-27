@@ -9,9 +9,9 @@ When the round starts Terrorists are unable to see, or hear Counterterrorists. O
 
 #####Recommendations:
 
-**Friendlyfire** should be **on**		
-The **roundtime** should be **1min - 1:20**		
-You should allow **Max 8v8**, anything above that becomes an unplayable game (Because the gamemode is not designed for that much players).
+- **Friendlyfire** should be **on**		
+- The **roundtime** should be **1min - 1:20**		
+- You should allow **Max 8v8**, anything above that becomes an unplayable game (Because the gamemode is not designed for that much players).
 
 #####Cvars:
 
