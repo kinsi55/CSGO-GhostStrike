@@ -15,14 +15,14 @@ When the round starts Terrorists are unable to see, or hear Counterterrorists. O
 
 #####Cvars:
 
-- **ghoststrike_enable** - Enables/disables GhostStrike.		
-- **ghoststrike_autodisable** - Automatically disable the gamemode on Intermission (Game end)		
-- **ghoststrike_block_invisible_damage** - Block damage dealt to invisible counterterrorists		
-- **ghoststrike_allow_trolling** - Allow invisible Counter Terrorists to show themselves while holding R(Reload)		
-- **ghoststrike_block_all_invisible_sounds** - Block all Sounds created by invisible Countererrorists (Not just steps, but jumps etc as well)		
-- **ghoststrike_c4timer** - This value is piped into the mp_c4timer cvar when the gamemode is enabled		
-- **ghoststrike_show_bomb_guidelines** - Draw a Line from every Counterterrorist to the bomb when it is planted		
-- **ghoststrike_bomb_delay** - The delay in seconds after the roundstart when the bomb will be given out		
+- **ghoststrike_enable** - Enables/disables GhostStrike.
+- **ghoststrike_autodisable** - Automatically disable the gamemode on Intermission (Game end)
+- **ghoststrike_block_invisible_damage** - Block damage dealt to invisible counterterrorists
+- **ghoststrike_allow_trolling** - Allow invisible Counter Terrorists to show themselves while holding R(Reload)
+- **ghoststrike_block_all_invisible_sounds** - Block all Sounds created by invisible Countererrorists (Not just steps, but jumps etc as well)
+- **ghoststrike_c4timer** - This value is piped into the mp_c4timer cvar when the gamemode is enabled
+- **ghoststrike_show_bomb_guidelines** - Draw a Line from every Counterterrorist to the bomb when it is planted
+- **ghoststrike_bomb_delay** - The delay in seconds after the roundstart when the bomb will be given out
 - **ghoststrike_full_noblock** - If full noblock should be active instead of using bouncy collisions
 
 #####Restrictions (Per concept):
