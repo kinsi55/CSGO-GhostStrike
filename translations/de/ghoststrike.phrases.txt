@@ -63,6 +63,6 @@
 
 	"Cannot_Plant_Region"
 	{
-		"de" "Du kannst hier nicht die bombe legen da diese zuvor in der markierten Zone gelegt wurde."
+		"de" "Du kannst die Bombe nicht in der markierten Zone da diese zuvor in dieser gelegt war."
 	}
 }
