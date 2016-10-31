@@ -61,4 +61,9 @@
 	{
 		"en" "You can plant the bomb{GREEN} anywhere{DEFAULT} on the map, but keep in mind there might always be a{LIGHTBLUE} CT{RED} right next to you."
 	}
+
+	"Cannot_Plant_Region"
+	{
+		"en" "You can't plant here because a bomb was previously planted closely in the marked area."
+	}
 }

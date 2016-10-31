@@ -24,7 +24,7 @@
 #include <sdktools>
 #pragma newdecls required
 
-#define PLUGIN_VERSION "1.2.2"
+#define PLUGIN_VERSION "1.2.3"
 
 public Plugin myinfo = {
 	name = "GhostStrike",
@@ -39,8 +39,10 @@ public Plugin myinfo = {
 #define COLLISION_GROUP_PLAYER				5
 #define SOLID_BBOX								2	// an AABB
 #define EF_NODRAW									1 << 5
+#define NumSavedPlantPositions		8
 
 int BeamModelIndex = -1;
+int no_z_BeamModelIndex = -1;
 int g_bombZoneEnt = -1;
 
 //Game States
@@ -48,6 +50,10 @@ bool isPlanted = false;
 bool isWarmup = true;
 int bombGiveTimer = -1;
 bool unhideCT[MAXPLAYERS+1] = {false, ...};
+
+float previousPlants[NumSavedPlantPositions][3];
+int previousPlantsIndex = 0;
+int plantBlockSphereScroll = 0;
 
 //Settings / Cvars
 bool active = false;
@@ -62,21 +68,35 @@ ConVar g_hBombGiveDelay = null;
 ConVar g_hC4Timer = null;
 ConVar g_hDrawBombLine = null;
 ConVar g_hFullNoblock = null;
+ConVar g_hPlantPreventRadius = null;
+ConVar g_hHPBonusFactor = null;
+
+void resetPreviousPlants(bool clearArray = false) {
+	previousPlantsIndex = 0;
+	if(clearArray) for(int i = 0; i < NumSavedPlantPositions; i++){
+		previousPlants[i][0] = 0.0;
+		previousPlants[i][1] = 0.0;
+		previousPlants[i][2] = 0.0;
+	}
+}
 
 public void OnPluginStart() {
 	HookEvent("round_start", Event_RoundStart);
 	HookEvent("round_freeze_end", Event_FreezeTimeEnd);
 	HookEvent("bomb_planted", Event_BombPlanted, EventHookMode_PostNoCopy);
+	HookEvent("bomb_beginplant", Event_BombPlant, EventHookMode_Post);
 	HookEvent("cs_intermission", Event_Intermission, EventHookMode_PostNoCopy);
+	HookEvent("announce_phase_end", Event_PhaseEnd, EventHookMode_PostNoCopy);
 	HookEvent("player_spawn", OnPlayerSpawn, EventHookMode_Post);
 
 	AddNormalSoundHook(OnNormalSoundPlayed);
 
 	CreateTimer(1.0, OnSecond, _, TIMER_REPEAT);
+	CreateTimer(0.5, OnSphereTimer, _, TIMER_REPEAT);
 
 	//Cvars
 	CreateConVar("ghoststrike_version", PLUGIN_VERSION, "GhostStrike Version", FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY|FCVAR_DONTRECORD);
-	g_hEnabled = CreateConVar("ghoststrike_enable", "1", "Enables/disables GhostStrike.", FCVAR_NONE, true, 0.0, true, 1.0);
+	g_hEnabled = CreateConVar("ghoststrike_enable", "1", "Enables/disables GhostStrike", FCVAR_NONE, true, 0.0, true, 1.0);
 	g_hEnabled.AddChangeHook(EnableCvarChange);
 
 	g_hDisableOnEnd = CreateConVar("ghoststrike_autodisable", "0", "Automatically disable the gamemode on Intermission (Game end)", FCVAR_NONE, true, 0.0, true, 1.0);
@@ -87,6 +107,8 @@ public void OnPluginStart() {
 	g_hDrawBombLine = CreateConVar("ghoststrike_show_bomb_guidelines", "1", "Draw a Line from every Counterterrorist to the bomb when it is planted", FCVAR_NONE, true, 0.0, true, 1.0);
 	g_hBombGiveDelay = CreateConVar("ghoststrike_bomb_delay", "30", "The Delay in seconds after the roundstart when the bomb will be given out", FCVAR_NONE, true, 20.0, true, 60.0);
 	g_hFullNoblock = CreateConVar("ghoststrike_full_noblock", "0", "If full noblock should be active instead of using bouncy collisions", FCVAR_NONE, true, 0.0, true, 1.0);
+	g_hPlantPreventRadius = CreateConVar("ghoststrike_plant_block_radius", "350", "Minimum spherical distance you need to have to previous plant-positions to be able to plant (0 = Off) to prevent re-use of plant spots.", FCVAR_NONE, true, 0.0, true, 800.0);
+	g_hHPBonusFactor = CreateConVar("ghoststrike_ct_hp_bonus", "15", "Multiplicator for the HP bonus for CT's for each Terrorist after the fifth one (0 = off).", FCVAR_NONE, true, 0.0, true, 50.0);
 
 	AutoExecConfig(true, "ghoststrike");
 
@@ -98,15 +120,13 @@ public void OnPluginStart() {
 		if(IsValidClient(i)) OnClientPutInServer(i);
 
 	LoadTranslations("ghoststrike.phrases");
+
+	resetPreviousPlants(true);
 }
 
-public void OnPluginEnd() {
-	EnableCvarChange(g_hEnabled, "", "0");
-}
+public void OnPluginEnd() { EnableCvarChange(g_hEnabled, "", "0"); }
 
-public void OnMapEnd() {
-	g_bombZoneEnt = -1;
-}
+public void OnMapEnd() { g_bombZoneEnt = -1; resetPreviousPlants(true); }
 
 public void EnableCvarChange(ConVar cvar, const char[] oldvalue, const char[] newvalue) {
 	bool newState = StringToInt(newvalue) ? true : false;
@@ -118,13 +138,12 @@ public void EnableCvarChange(ConVar cvar, const char[] oldvalue, const char[] ne
 		else{
 			if(IsValidEntity(g_bombZoneEnt)) AcceptEntityInput(g_bombZoneEnt, "Kill");
 			g_bombZoneEnt = -1;
+			resetPreviousPlants(true);
 
 			//Make everyone fully opaque on disable
-			for(int i = 1; i < MaxClients; i++) {
-				if(IsValidClient(i)) {
-					SetEntityRenderColor(i, 255, 255, 255, 255);
-					SetEntProp(i, Prop_Data, "m_CollisionGroup", COLLISION_GROUP_PLAYER);
-				}
+			for(int i = 1; i < MaxClients; i++) if(IsValidClient(i)) {
+				SetEntityRenderColor(i, 255, 255, 255, 255);
+				SetEntProp(i, Prop_Data, "m_CollisionGroup", COLLISION_GROUP_PLAYER);
 			}
 		}
 	}
@@ -132,10 +151,14 @@ public void EnableCvarChange(ConVar cvar, const char[] oldvalue, const char[] ne
 
 public void Event_Intermission(Handle event, const char[] name, bool dontBroadcast) {
 	if(g_hDisableOnEnd.BoolValue) g_hEnabled.SetBool(false);
+	resetPreviousPlants(true);
+}
+
+public void Event_PhaseEnd(Handle event, const char[] name, bool dontBroadcast) {
+	resetPreviousPlants(true);
 }
 
 public Action OnNormalSoundPlayed(int clients[MAXPLAYERS], int &numClients, char sample[PLATFORM_MAX_PATH], int &entity, int &channel, float &volume, int &level, int &pitch, int &flags, char soundEntry[PLATFORM_MAX_PATH], int &seed) {
-//public Action OnNormalSoundPlayed(int clients[64], int &numClients, char sample[PLATFORM_MAX_PATH], int &entity, int &channel, float &volume, int &level, int &pitch)
 	if(!active || isWarmup || isPlanted || entity < 1 || entity > 64)
 		return Plugin_Continue;
 
@@ -159,8 +182,10 @@ public Action OnNormalSoundPlayed(int clients[MAXPLAYERS], int &numClients, char
 
 public void OnMapStart() {
 	PrecacheModel("models/props/cs_office/vending_machine.mdl", true);
+	PrecacheSound("buttons/button8.wav", true);
 
 	BeamModelIndex = PrecacheModel("materials/sprites/laserbeam.vmt", true);
+	no_z_BeamModelIndex = PrecacheModel("materials/sprites/radar.vmt", true);
 }
 
 public void OnConfigsExecuted(){
@@ -175,6 +200,8 @@ public Action Event_RoundStart(Event event, const char[] name, bool dontBroadcas
 
 	isPlanted = false;
 	int i;
+	int CT_HP_Bonus = GetTeamClientCount(CS_TEAM_T);
+	if(CT_HP_Bonus > 5) CT_HP_Bonus *= g_hHPBonusFactor.IntValue; else CT_HP_Bonus = 0;
 
 	for(i = 1; i < MaxClients; i++) {
 		if(IsValidClient(i)) if(GetClientTeam(i) == CS_TEAM_CT) {
@@ -186,6 +213,8 @@ public Action Event_RoundStart(Event event, const char[] name, bool dontBroadcas
 
 			//Prevent the client from Attacking
 			SetEntPropFloat(i, Prop_Send, "m_flNextAttack", 99999999.0);
+
+			if(CT_HP_Bonus > 100) SetEntityHealth(i, CT_HP_Bonus);
 		} else {
 			CGOPrintToChat(i, "[{GREEN}GhostStrike{DEFAULT}] %t", g_hBlockInvisibleDamage.BoolValue ? "Instructions_T_1_Invincible" : "Instructions_T_1_Not_Invincible");
 
@@ -193,7 +222,7 @@ public Action Event_RoundStart(Event event, const char[] name, bool dontBroadcas
 		}
 	}
 
-	i = 0; //Incase its a hostage map, kill all hostages
+	i = -1; //Incase its a hostage map, kill all hostages
 	while((i = FindEntityByClassname(i, "hostage_entity")) != -1)
 		AcceptEntityInput(i, "Kill");
 }
@@ -273,6 +302,8 @@ public Action Timer_RestrictNextAttack(Handle timer, int client) {
 	SetEntPropFloat(client, Prop_Send, "m_flNextAttack", 99999999.0);
 }
 
+int bombClient = 1;
+
 public Action OnSecond(Handle timer) {
 	if(active && !isWarmup && bombGiveTimer > 0) {
 		if(GetTeamClientCount(CS_TEAM_T) > 0)
@@ -295,6 +326,7 @@ public Action OnSecond(Handle timer) {
 			Format(escapedName, sizeof(escapedName), "<font color='#ff0000'>%s</font>", escapedName);
 
 			PrintHintTextToAll("%s %t!", escapedName, "Bomb_ReceivedBy");
+			bombClient = clientArrayIndex;
 			CGOPrintToChatAll("[{GREEN}GhostStrike{DEFAULT}]{RED} %N{DEFAULT} %t!", clientArrayIndex, "Bomb_ReceivedBy");
 
 			GivePlayerItem(clientArrayIndex, "weapon_c4");
@@ -302,17 +334,93 @@ public Action OnSecond(Handle timer) {
 		}
 	}
 }
+float planterPos[3];
+
+public Action OnSphereTimer(Handle timer) {
+	int tehRadius = g_hPlantPreventRadius.IntValue;
+
+	if(active && !isWarmup && bombGiveTimer == -1 && tehRadius > 0 && !isPlanted && IsValidClient(bombClient) && IsPlayerAlive(bombClient)) {
+		int tehDiameter = tehRadius * 2;
+		const float numRings = 13.0;
+		float numHalfRings = (numRings - 1) / 2;
+
+		float tehFreeSpace = float(tehRadius) / numRings;
+		plantBlockSphereScroll = (plantBlockSphereScroll + 3) % RoundFloat(tehFreeSpace);
+		float offset_abs = float(plantBlockSphereScroll) / tehFreeSpace;
+
+		GetClientAbsOrigin(bombClient, planterPos);
+
+		for(int i = 0; i < NumSavedPlantPositions; i++) {
+			if(previousPlants[i][0] != 0.0 && GetVectorDistance(previousPlants[i], planterPos) <= tehRadius * 2) {
+				planterPos = previousPlants[i];
+				planterPos[2] += tehRadius;
+
+				TE_SetupBeamPoints(planterPos, previousPlants[i], BeamModelIndex, 0, 0, 0, 0.5, 1.0, 4.0, 1, 0.0, {128, 128, 1, 200}, 10);
+				TE_SendToClient(bombClient);
+
+				//Do you want this?
+				//I will release it in form of an include soon with integrated auto-updating etc.
+				//Stay tuned!
+				for(float x = -numHalfRings; x <= numHalfRings; x += 1.0) {
+					float pos = (tehDiameter / numRings) * (x + offset_abs);
+
+					planterPos[2] = previousPlants[i][2] + pos;
+
+					if(pos < 0) pos *= -1;
+					pos = tehRadius - pos;
+
+					float t2 = x + offset_abs;
+
+					t2 = t2 / numHalfRings;
+					if(t2 > 1.0 || t2 < -1.0) t2 = 1.0;
+
+					float y = tehDiameter * SquareRoot(1.0 - (t2 * t2));
+
+					if(y < 2) continue;
+
+					TE_SetupBeamRingPoint(planterPos, y, y + 0.1, BeamModelIndex, 0, 0, 0, 0.5, 2.0, 0.0, {128, 255, 0, 170}, 0, 0);
+					TE_SendToClient(bombClient);
+
+					TE_SetupBeamRingPoint(planterPos, y, y + 0.1, no_z_BeamModelIndex, 0, 0, 0, 0.5, 2.0, 0.0, {0, 255, 0, 60}, 10, 0);
+					TE_SendToClient(bombClient);
+				}
+			}
+		}
+	}
+}
 
 float plantedBombOrigin[3];
 
-public void Event_BombPlanted(Handle event, const char[] name, bool dontBroadcast) {
+public void Event_BombPlant(Event event, const char[] name, bool dontBroadcast) {
+	if(active && !isWarmup) {
+		bombClient = GetClientOfUserId(event.GetInt("userid"));
+
+		GetClientAbsOrigin(bombClient, plantedBombOrigin);
+
+		for(int i = 0; i < NumSavedPlantPositions; i++) {
+			if(previousPlants[i][0] != 0.0 && GetVectorDistance(previousPlants[i], plantedBombOrigin) <= g_hPlantPreventRadius.FloatValue) {
+				SetEntPropFloat(GetEntPropEnt(bombClient, Prop_Send, "m_hActiveWeapon"), Prop_Send, "m_fArmedTime", 99999999.0);
+
+				EmitSoundToClient(bombClient, "buttons/button8.wav");
+				PrintCenterText(bombClient, "%t", "Cannot_Plant_Region");
+				break;
+			}
+		}
+	}
+}
+
+public void Event_BombPlanted(Event event, const char[] name, bool dontBroadcast) {
 	if(!active || isWarmup) return;
 
 	isPlanted = true;
 
-	int c4 = g_hDrawBombLine.BoolValue ? FindEntityByClassname(-1, "planted_c4") : -1;
+	int c4 = FindEntityByClassname(-1, "planted_c4");
 
-	if(c4 != -1) GetEntPropVector(c4, Prop_Send, "m_vecOrigin", plantedBombOrigin);
+	if(c4 != -1) {
+		GetEntPropVector(c4, Prop_Send, "m_vecOrigin", plantedBombOrigin);
+		previousPlants[previousPlantsIndex++] = plantedBombOrigin;
+		if(previousPlantsIndex >= NumSavedPlantPositions) previousPlantsIndex = 0;
+	}
 
 	for(int i = 1; i < MaxClients; i++) {
 		if(IsValidClient(i) && GetClientTeam(i) == CS_TEAM_CT) {
@@ -321,11 +429,11 @@ public void Event_BombPlanted(Handle event, const char[] name, bool dontBroadcas
 
 			SetEntityRenderColor(i, 255, 255, 255, 255);
 
-			// PrintHintText(i, "<font color='#ffff00'>You are now visible to the Terrorists and can attack!</font>!");
-
-			if(c4 != -1 && BeamModelIndex > 0)
+			if(c4 != -1 && g_hDrawBombLine.BoolValue && BeamModelIndex > 0)
 				//Delay Beam otherwise game might crash because Source.
 				CreateTimer(0.1, DelayedUserNotif, i);
+
+			if(GetClientHealth(i) > 100) SetEntityHealth(i, 100);
 		}
 	}
 }
@@ -355,7 +463,7 @@ public void OnPlayerSpawn(Event event, const char[] name, bool dontBroadcast) {
 		//as well as prevents people from boosting into difficult to reach spots
 		SetEntProp(client, Prop_Data, "m_CollisionGroup", g_hFullNoblock.BoolValue ? COLLISION_GROUP_DEBRIS_TRIGGER : COLLISION_GROUP_PUSHAWAY);
 
-		if(GetClientTeam(client) == CS_TEAM_T){
+		if(GetClientTeam(client) == CS_TEAM_T) {
 			CreateTimer(1.0, DelayedBombRemoval, client);
 		} else if(GetClientTeam(client) == CS_TEAM_CT) {
 			SetEntityRenderMode(client, RENDER_TRANSCOLOR);
@@ -381,8 +489,7 @@ public void init() {
 
 	//Create new global bomb zone
 	if(IsModelPrecached("models/props/cs_office/vending_machine.mdl") && (g_bombZoneEnt = CreateEntityByName("func_bomb_target")) != -1) {
-		DispatchSpawn(g_bombZoneEnt);
-		ActivateEntity(g_bombZoneEnt);
+		DispatchSpawn(g_bombZoneEnt); ActivateEntity(g_bombZoneEnt);
 
 		TeleportEntity(g_bombZoneEnt, view_as<float>({0.0, 0.0, 0.0}), NULL_VECTOR, NULL_VECTOR);
 

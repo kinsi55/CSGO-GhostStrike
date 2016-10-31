@@ -60,4 +60,9 @@
 	{
 		"de" "Du kannst die Bombe{GREEN} überall{DEFAULT} auf der Karte legen, beachte jedoch dass zu jeder Zeit ein{LIGHTBLUE} CT{RED} direkt neben dir sein könnte."
 	}
+
+	"Cannot_Plant_Region"
+	{
+		"de" "Du kannst hier nicht die bombe legen da diese zuvor in der markierten Zone gelegt wurde."
+	}
 }
