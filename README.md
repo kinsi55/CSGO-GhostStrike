@@ -24,6 +24,8 @@ When the round starts Terrorists are unable to see, or hear Counterterrorists. O
 - **ghoststrike_show_bomb_guidelines** - Draw a Line from every Counterterrorist to the bomb when it is planted
 - **ghoststrike_bomb_delay** - The delay in seconds after the roundstart when the bomb will be given out
 - **ghoststrike_full_noblock** - If full noblock should be active instead of using bouncy collisions
+- **ghoststrike_plant_block_radius** - Minimum spherical distance you need to have to previous plant-positions to be able to plant (0 = Off) to prevent re-use of plant spots.
+- **ghoststrike_ct_hp_bonus** - Multiplicator for the HP bonus for CT's for each Terrorist after the fifth one (0 = off).
 
 #####Restrictions (Per concept):
 
