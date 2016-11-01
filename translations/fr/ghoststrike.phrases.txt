@@ -1,0 +1,63 @@
+"Phrases"
+{
+	"Trolling_NowVisible"
+	{
+		"fr" "<font color='#00ff00'>Les terroristes peuvent te voir!</font>"
+	}
+
+	"Trolling_NowHidden"
+	{
+		"fr" "<font color='#ff0000'>Tu es de nouveau invisible!</font>"
+	}
+
+	"Bomb_DeployIn"
+	{
+		"#format" "{1:i}"
+		"fr" "La bombe sera donnée à un terroriste au hasard dans <font color='#edda74'>{1} seconde(s)</font>!"
+	}
+
+	"Bomb_ReceivedBy"
+	{
+		"fr" "a reçu la bombe!"
+	}
+
+	"Instructions_CT_1_Not_Invincible"
+	{
+		"fr" "Tu es{GREEN} invisible{DEFAULT} et les{RED} Terroristes{DEFAULT} ne peuvent entendre tes bruits de pas. Cependant, tu n'es pas{RED} invincible{DEFAULT}."
+	}
+
+	"Instructions_CT_1_Invincible"
+	{
+		"fr" "Tu es{GREEN} invisible{DEFAULT} et les{RED} Terroristes{DEFAULT} ne peuvent entendre tes bruits de pas. Tu es{GREEN} invincible{DEFAULT}."
+	}
+
+	"Instructions_CT_2_NoSteps"
+	{
+		"fr" "Tu ne peux{RED} pas{DEFAULT} tirer tant que la bombe n'est pas posée! Si tes pas sont inaudibles, tous les autres bruits (ex. sauts, echelles) le sont!"
+	}
+
+	"Instructions_CT_2_NoSounds"
+	{
+		"fr" "Tu ne peux{RED} pas{DEFAULT} tirer tant que la bombe n'est pas posée! Tout les sons que tu produis {GREEN}ne peuvent{DEFAULT} être entendus par les  {RED}Terroristes."
+	}
+
+	"Instructions_CT_TrollingAllowed"
+	{
+		"fr" "Même si tu es invisible, tu peux te montrer aux {RED}Terroristes {DEFAULT}en appuyant sur ta touche {GREEN}Recharger."
+	}
+
+	"Instructions_T_1_Not_Invincible"
+	{
+		"fr" "Les{LIGHTBLUE} Anti-terroristes{DEFAULT} sont{RED} invisibles{DEFAULT}, mais{GREEN} pas invincibles{DEFAULT} jusqu'a ce que tu pose la bombe !"
+	}
+
+	"Instructions_T_1_Invincible"
+	{
+		"fr" "Les{LIGHTBLUE} Anti-terroristes{DEFAULT} sont{RED} invisibles{DEFAULT}, et{RED} invincibles{DEFAULT} jusqu'a ce que tu pose la bombe !"
+	}
+
+	"Instructions_T_2_BombPlant"
+	{
+		"fr" "Tu peux poser la bombe{GREEN} n'importe ou{DEFAULT} sur la carte, mais il peut toujours y avoir un{LIGHTBLUE} Anti-terroriste{RED} juste derriere toi."
+	}
+}
