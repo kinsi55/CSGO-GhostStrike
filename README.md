@@ -26,6 +26,7 @@ When the round starts Terrorists are unable to see, or hear Counterterrorists. O
 - **ghoststrike_full_noblock** - If full noblock should be active instead of using bouncy collisions
 - **ghoststrike_plant_block_radius** - Minimum spherical distance you need to have to previous plant-positions to be able to plant (0 = Off) to prevent re-use of plant spots.
 - **ghoststrike_ct_hp_bonus** - Multiplicator for the HP bonus for CT's for each Terrorist after the fifth one (0 = off).
+- **ghoststrike_timeover_forceplant** - Force the bomb plant when the time is about to hit 0 to prevent trolls.
 
 #####Restrictions (Per concept):
 
