@@ -24,7 +24,7 @@
 #include <sdktools>
 #pragma newdecls required
 
-#define PLUGIN_VERSION "1.2.3"
+#define PLUGIN_VERSION "1.3.0"
 
 public Plugin myinfo = {
 	name = "GhostStrike",
@@ -50,10 +50,15 @@ bool isPlanted = false;
 bool isWarmup = true;
 int bombGiveTimer = -1;
 bool unhideCT[MAXPLAYERS+1] = {false, ...};
+int bombClient = -1;
+int bombClientC4Entity = -1;
 
 float previousPlants[NumSavedPlantPositions][3];
 int previousPlantsIndex = 0;
 int plantBlockSphereScroll = 0;
+bool forcePlant = false;
+int failPlantCount = 0;
+int g_iRoundStartTime = -1;
 
 //Settings / Cvars
 bool active = false;
@@ -70,6 +75,9 @@ ConVar g_hDrawBombLine = null;
 ConVar g_hFullNoblock = null;
 ConVar g_hPlantPreventRadius = null;
 ConVar g_hHPBonusFactor = null;
+ConVar g_hEnableForcePlant = null;
+
+Handle h_MP_RESTARTGAME = INVALID_HANDLE;
 
 void resetPreviousPlants(bool clearArray = false) {
 	previousPlantsIndex = 0;
@@ -84,7 +92,8 @@ public void OnPluginStart() {
 	HookEvent("round_start", Event_RoundStart);
 	HookEvent("round_freeze_end", Event_FreezeTimeEnd);
 	HookEvent("bomb_planted", Event_BombPlanted, EventHookMode_PostNoCopy);
-	HookEvent("bomb_beginplant", Event_BombPlant, EventHookMode_Post);
+	HookEvent("bomb_pickup", Event_BombPickup, EventHookMode_Post);
+	HookEvent("bomb_beginplant", Event_BombPlantPre, EventHookMode_Pre);
 	HookEvent("cs_intermission", Event_Intermission, EventHookMode_PostNoCopy);
 	HookEvent("announce_phase_end", Event_PhaseEnd, EventHookMode_PostNoCopy);
 	HookEvent("player_spawn", OnPlayerSpawn, EventHookMode_Post);
@@ -93,7 +102,11 @@ public void OnPluginStart() {
 
 	CreateTimer(1.0, OnSecond, _, TIMER_REPEAT);
 	CreateTimer(0.5, OnSphereTimer, _, TIMER_REPEAT);
-
+	
+	h_MP_RESTARTGAME = FindConVar("mp_restartgame");
+	if(h_MP_RESTARTGAME != INVALID_HANDLE)
+		HookConVarChange(h_MP_RESTARTGAME, MpRestartGame);
+	
 	//Cvars
 	CreateConVar("ghoststrike_version", PLUGIN_VERSION, "GhostStrike Version", FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY|FCVAR_DONTRECORD);
 	g_hEnabled = CreateConVar("ghoststrike_enable", "1", "Enables/disables GhostStrike", FCVAR_NONE, true, 0.0, true, 1.0);
@@ -109,6 +122,7 @@ public void OnPluginStart() {
 	g_hFullNoblock = CreateConVar("ghoststrike_full_noblock", "0", "If full noblock should be active instead of using bouncy collisions", FCVAR_NONE, true, 0.0, true, 1.0);
 	g_hPlantPreventRadius = CreateConVar("ghoststrike_plant_block_radius", "350", "Minimum spherical distance you need to have to previous plant-positions to be able to plant (0 = Off) to prevent re-use of plant spots.", FCVAR_NONE, true, 0.0, true, 800.0);
 	g_hHPBonusFactor = CreateConVar("ghoststrike_ct_hp_bonus", "15", "Multiplicator for the HP bonus for CT's for each Terrorist after the fifth one (0 = off).", FCVAR_NONE, true, 0.0, true, 50.0);
+	g_hEnableForcePlant = CreateConVar("ghoststrike_timeover_forceplant", "0", "Force the bomb plant when the time is about to hit 0 to prevent trolls.", FCVAR_NONE, true, 0.0, true, 1.0);
 
 	AutoExecConfig(true, "ghoststrike");
 
@@ -124,6 +138,10 @@ public void OnPluginStart() {
 	resetPreviousPlants(true);
 }
 
+public void MpRestartGame(Handle cvar, const char[] oldVal, const char[] newVal) {
+	if(!StrEqual(newVal, "0") && strlen(newVal) > 0) resetPreviousPlants(true);
+}
+
 public void OnPluginEnd() { EnableCvarChange(g_hEnabled, "", "0"); }
 
 public void OnMapEnd() { g_bombZoneEnt = -1; resetPreviousPlants(true); }
@@ -135,7 +153,7 @@ public void EnableCvarChange(ConVar cvar, const char[] oldvalue, const char[] ne
 		//Call Init on Enable
 		if(newState) init();
 		//Remove the Global Bombzone on Disable
-		else{
+		else {
 			if(IsValidEntity(g_bombZoneEnt)) AcceptEntityInput(g_bombZoneEnt, "Kill");
 			g_bombZoneEnt = -1;
 			resetPreviousPlants(true);
@@ -186,19 +204,24 @@ public void OnMapStart() {
 
 	BeamModelIndex = PrecacheModel("materials/sprites/laserbeam.vmt", true);
 	no_z_BeamModelIndex = PrecacheModel("materials/sprites/radar.vmt", true);
+	bombClient = -1;
 }
 
-public void OnConfigsExecuted(){
+public void OnConfigsExecuted() {
 	if(active) init();
 }
 
 public Action Event_RoundStart(Event event, const char[] name, bool dontBroadcast) {
 	bombGiveTimer = -1;
+	bombClient = -1;
+	failPlantCount = 0;
+	g_iRoundStartTime = -1;
+	forcePlant = false;
+	isPlanted = false;
 	//When the Timelimit is 999 it (apparently) means, warmup.
 	//Please do not set a roundtime of 999 Seconds, or if you read this and know better, tell me :^)
 	if(!active || (isWarmup = event.GetInt("timelimit") == 999)) return;
-
-	isPlanted = false;
+	
 	int i;
 	int CT_HP_Bonus = GetTeamClientCount(CS_TEAM_T);
 	if(CT_HP_Bonus > 5) CT_HP_Bonus *= g_hHPBonusFactor.IntValue; else CT_HP_Bonus = 0;
@@ -212,7 +235,7 @@ public Action Event_RoundStart(Event event, const char[] name, bool dontBroadcas
 			if(g_hAllowTrolling.BoolValue) CGOPrintToChat(i, "[{GREEN}GhostStrike{DEFAULT}] %t", "Instructions_CT_TrollingAllowed");
 
 			//Prevent the client from Attacking
-			SetEntPropFloat(i, Prop_Send, "m_flNextAttack", 99999999.0);
+			SetEntPropFloat(i, Prop_Send, "m_flNextAttack", 9999999.0);
 
 			if(CT_HP_Bonus > 100) SetEntityHealth(i, CT_HP_Bonus);
 		} else {
@@ -228,7 +251,11 @@ public Action Event_RoundStart(Event event, const char[] name, bool dontBroadcas
 }
 
 public Action Event_FreezeTimeEnd(Event event, const char[] name, bool dontBroadcast) {
-	if(active) bombGiveTimer = g_hBombGiveDelay.IntValue;
+	if(active){
+		bombGiveTimer = g_hBombGiveDelay.IntValue;
+		
+		g_iRoundStartTime = GetTime();
+	}
 }
 
 public void OnClientDisconnect(int client) {
@@ -239,7 +266,7 @@ public void OnClientDisconnect(int client) {
 public void OnClientPutInServer(int client) {
 	SDKHook(client, SDKHook_PostThinkPost, Hook_PostThinkPost);
 	SDKHook(client, SDKHook_SetTransmit, Hook_SetTransmit);
-	SDKHook(client, SDKHook_WeaponCanSwitchToPost, Hook_WeaponCanSwitchToPost);
+	SDKHook(client, SDKHook_WeaponCanSwitchTo, Hook_WeaponCanSwitch); 
 	SDKHook(client, SDKHook_TraceAttack, OnTraceAttack);
 }
 //Hiding CT's to T's pre-plant
@@ -253,11 +280,30 @@ public Action Hook_SetTransmit(int entity, int client) {
 	return Plugin_Continue;
 }
 
-public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3], int &weapon, int &subtype, int &cmdnum, int &tickcount, int &seed, int mouse[2]) {
-	if(!active || isWarmup || !g_hAllowTrolling.BoolValue)
-		return Plugin_Continue;
+public Action CS_OnCSWeaponDrop(int client, int weaponIndex) {
+	if(client == bombClient && weaponIndex == bombClientC4Entity && forcePlant) return Plugin_Stop;
+	return Plugin_Continue;
+}
 
-	if(IsValidClient(client) && GetClientTeam(client) == CS_TEAM_CT) {
+//Re-Set m_flNextAttack on weaponswitch & prevent weapon switch on force-plant
+public Action Hook_WeaponCanSwitch(int client, int weapon) {
+	if(active && !isWarmup && !isPlanted && client == bombClient && forcePlant && weapon != bombClientC4Entity)
+		return Plugin_Handled;
+
+	if(active && !isWarmup && !isPlanted && GetClientTeam(client) == CS_TEAM_CT)
+		//Needs to be delayed by a tick, otherwise it wont work.
+		CreateTimer(0.0, Timer_RestrictNextAttack, client);
+
+	return Plugin_Continue;
+}  
+
+public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3], int &weapon, int &subtype, int &cmdnum, int &tickcount, int &seed, int mouse[2]) {
+	if(!active || isWarmup)
+		return Plugin_Continue;
+	
+	int clientTeam = GetClientTeam(client);
+	
+	if(IsValidClient(client)) if(clientTeam == CS_TEAM_CT && g_hAllowTrolling.BoolValue){
 		bool shouldUnhide = !isPlanted && buttons & IN_RELOAD && IsPlayerAlive(client);
 		if(shouldUnhide != unhideCT[client]) {
 			if(shouldUnhide){
@@ -270,6 +316,9 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 
 			unhideCT[client] = shouldUnhide;
 		}
+	}else if(clientTeam == CS_TEAM_T) {
+		if(client == bombClient && forcePlant && !isPlanted) buttons |= /*IN_USE*/ IN_ATTACK;
+		return Plugin_Changed;
 	}
 
 	return Plugin_Continue;
@@ -291,49 +340,63 @@ public void Hook_PostThinkPost(int client) {
   	SetEntProp(client, Prop_Send, "m_bSpotted", 0);
 }
 
-//Re-Set m_flNextAttack on weaponswitch
-public void Hook_WeaponCanSwitchToPost(int client) {
-	if(active && !isWarmup && !isPlanted && GetClientTeam(client) == CS_TEAM_CT)
-		//Needs to be delayed by a tick, otherwise it wont work, eventhough its a post-hook.
-		CreateTimer(0.0, Timer_RestrictNextAttack, client);
-}
-
 public Action Timer_RestrictNextAttack(Handle timer, int client) {
-	SetEntPropFloat(client, Prop_Send, "m_flNextAttack", 99999999.0);
+	SetEntPropFloat(client, Prop_Send, "m_flNextAttack", 9999999.0);
 }
-
-int bombClient = 1;
 
 public Action OnSecond(Handle timer) {
 	if(active && !isWarmup && bombGiveTimer > 0) {
 		if(GetTeamClientCount(CS_TEAM_T) > 0)
 			PrintHintTextToAll("%t", "Bomb_DeployIn", --bombGiveTimer);
 	} else if(active && bombGiveTimer == 0) {
-		int clientArray[MAXPLAYERS+1];
-		int clientArrayIndex = 0;
-		//Arrify all T Players
-		for(int i = 1; i < MaxClients; i++) {
-			if(IsValidClient(i) && IsPlayerAlive(i) && GetClientTeam(i) == CS_TEAM_T)
-				clientArray[clientArrayIndex++] = i;
-		}
-
-		if(clientArrayIndex > 0) {
-			clientArrayIndex = clientArray[GetRandomInt(0, clientArrayIndex - 1)];
-
-			char escapedName[128]; Format(escapedName, sizeof(escapedName), "%N", clientArrayIndex);
+		bombClient = GetRandomAliveTerroristClient();
+		
+		if(bombClient != -1) {
+			char escapedName[128]; Format(escapedName, sizeof(escapedName), "%N", bombClient);
 			ReplaceString(escapedName, sizeof(escapedName), "<", "&lt;", true); ReplaceString(escapedName, sizeof(escapedName), ">", "&gt;", true);
 
 			Format(escapedName, sizeof(escapedName), "<font color='#ff0000'>%s</font>", escapedName);
 
 			PrintHintTextToAll("%s %t!", escapedName, "Bomb_ReceivedBy");
-			bombClient = clientArrayIndex;
-			CGOPrintToChatAll("[{GREEN}GhostStrike{DEFAULT}]{RED} %N{DEFAULT} %t!", clientArrayIndex, "Bomb_ReceivedBy");
+			CGOPrintToChatAll("[{GREEN}GhostStrike{DEFAULT}]{RED} %N{DEFAULT} %t!", bombClient, "Bomb_ReceivedBy");
 
-			GivePlayerItem(clientArrayIndex, "weapon_c4");
+			GivePlayerItem(bombClient, "weapon_c4");
 			bombGiveTimer = -1;
+		}
+	} else if(active && g_hEnableForcePlant.BoolValue && !isPlanted) {
+		int iCurrentRoundTime = GameRules_GetProp("m_iRoundTime");
+		
+		if(g_iRoundStartTime != -1 && GetTime() - g_iRoundStartTime > iCurrentRoundTime - 2 && failPlantCount++ < 3) {
+			if(!IsValidClient(bombClient) || forcePlant) bombClient = GetRandomAliveTerroristClient();
+			
+			if(bombClient != -1) {
+				bombClientC4Entity = GetPlayerWeaponSlot(bombClient, CS_SLOT_C4);
+				if(bombClientC4Entity <= MaxClients || !IsValidEntity(bombClientC4Entity)) {
+					float moveSpeed[3];
+					moveSpeed[0] = GetRandomFloat(-10.0, 30.0);
+					moveSpeed[1] = GetRandomFloat(-10.0, 30.0);
+					
+					TeleportEntity(bombClient, NULL_VECTOR, NULL_VECTOR, moveSpeed);
+					
+					SetEntProp(bombClient, Prop_Data, "m_bDropEnabled", true);
+				
+					bombClientC4Entity = GivePlayerItem(bombClient, "weapon_c4");
+					EquipPlayerWeapon(bombClient, bombClientC4Entity);
+					bombClientC4Entity = GetPlayerWeaponSlot(bombClient, CS_SLOT_C4);
+				}
+				
+				ClientCommand(bombClient, "slot%d", CS_SLOT_C4+1);
+				
+				GameRules_SetProp("m_iRoundTime", iCurrentRoundTime + 6, 4, 0, true);
+				
+				CreateTimer(0.5, DelayForceplant);
+			}else failPlantCount = 3;
 		}
 	}
 }
+
+public Action DelayForceplant(Handle timer) { forcePlant = true; }
+
 float planterPos[3];
 
 public Action OnSphereTimer(Handle timer) {
@@ -391,7 +454,7 @@ public Action OnSphereTimer(Handle timer) {
 
 float plantedBombOrigin[3];
 
-public void Event_BombPlant(Event event, const char[] name, bool dontBroadcast) {
+public Action Event_BombPlantPre(Event event, const char[] name, bool dontBroadcast) {
 	if(active && !isWarmup) {
 		bombClient = GetClientOfUserId(event.GetInt("userid"));
 
@@ -399,20 +462,29 @@ public void Event_BombPlant(Event event, const char[] name, bool dontBroadcast) 
 
 		for(int i = 0; i < NumSavedPlantPositions; i++) {
 			if(previousPlants[i][0] != 0.0 && GetVectorDistance(previousPlants[i], plantedBombOrigin) <= g_hPlantPreventRadius.FloatValue) {
-				SetEntPropFloat(GetEntPropEnt(bombClient, Prop_Send, "m_hActiveWeapon"), Prop_Send, "m_fArmedTime", 99999999.0);
-
-				EmitSoundToClient(bombClient, "buttons/button8.wav");
+				forcePlant = false;
+				
+				CreateTimer(0.0, Timer_RestrictBombPlant, GetEntPropEnt(bombClient, Prop_Send, "m_hActiveWeapon"));
+				EmitSoundToAll("buttons/button8.wav", bombClient);
 				PrintCenterText(bombClient, "%t", "Cannot_Plant_Region");
-				break;
+				return Plugin_Stop;
 			}
 		}
 	}
+	return Plugin_Continue;
+}
+
+public Action Timer_RestrictBombPlant(Handle timer, int hWeapon) {
+	if(IsValidEntity(hWeapon)) SetEntPropFloat(hWeapon, Prop_Send, "m_fArmedTime", 9999999.0);
 }
 
 public void Event_BombPlanted(Event event, const char[] name, bool dontBroadcast) {
 	if(!active || isWarmup) return;
 
 	isPlanted = true;
+	forcePlant = false;
+	bombClient = -1;
+	g_iRoundStartTime = -1;
 
 	int c4 = FindEntityByClassname(-1, "planted_c4");
 
@@ -436,6 +508,12 @@ public void Event_BombPlanted(Event event, const char[] name, bool dontBroadcast
 			if(GetClientHealth(i) > 100) SetEntityHealth(i, 100);
 		}
 	}
+}
+
+public void Event_BombPickup(Event event, const char[] name, bool dontBroadcast) {
+	if(!active || isWarmup) return;
+	
+	bombClient = GetClientOfUserId(event.GetInt("userid"));
 }
 
 public Action DelayedUserNotif(Handle timer, int client) {
@@ -477,7 +555,7 @@ public Action DelayedBombRemoval(Handle timer, int client) {
 	//Juuuust to be sure.
 	int C4 = GetPlayerWeaponSlot(client, CS_SLOT_C4);
 	if(C4 > MaxClients && IsValidEntity(C4)) {
-		CS_DropWeapon(client, C4, false, true);
+		SDKHooks_DropWeapon(client, C4);
 		AcceptEntityInput(C4, "kill");
 	}
 }
@@ -518,4 +596,22 @@ public void init() {
 
 public bool IsValidClient(int client){
 	return client <= MaxClients && client > 0 && IsClientConnected(client) && IsClientInGame(client);
+}
+
+public int GetRandomAliveTerroristClient(){
+	int clientArray[MAXPLAYERS+1] = {-1, ...};
+	int clientArrayIndex = 0;
+	//Arrify all T Players
+	for(int i = 1; i < MaxClients; i++) {
+		if(IsValidClient(i) && IsPlayerAlive(i) && GetClientTeam(i) == CS_TEAM_T)
+			clientArray[clientArrayIndex++] = i;
+	}
+
+	if(clientArrayIndex > 0) {
+		clientArrayIndex = clientArray[GetRandomInt(0, clientArrayIndex - 1)];
+		
+		if(IsValidClient(clientArrayIndex)) return clientArrayIndex;
+	}
+	
+	return -1;
 }
