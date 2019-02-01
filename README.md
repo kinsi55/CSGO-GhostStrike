@@ -3,17 +3,17 @@ Simple concept for a custom [CS:GO](http://store.steampowered.com/app/730/?l=ger
 
 It is tested, and meant to be played 5v5, so a normal "competitive" base.
 
-#####Summary:
+##### Summary:
 
 When the round starts Terrorists are unable to see, or hear Counterterrorists. On the other hand, Counterterrorists are unable to attack in any way. 40 seconds after the round has started a random Terrorist will be given a bomb, which he then can proceed to plant anywhere on the map. As soon as the bomb is planted Counterterrorists become visible to the Terrorists, and are able to Attack. After that its normal Counter-Strike with the aim to defuse the bomb.
 
-#####Recommendations:
+##### Recommendations:
 
 - **Friendlyfire** should be **on**		
 - The **roundtime** should be **1min - 1:20**		
 - You should allow **Max 8v8**, anything above that becomes an unplayable game (Because the gamemode is not designed for that much players).
 
-#####Cvars:
+##### Cvars:
 
 - **ghoststrike_enable** - Enables/disables GhostStrike.
 - **ghoststrike_autodisable** - Automatically disable the gamemode on Intermission (Game end)
@@ -28,7 +28,7 @@ When the round starts Terrorists are unable to see, or hear Counterterrorists. O
 - **ghoststrike_ct_hp_bonus** - Multiplicator for the HP bonus for CT's for each Terrorist after the fifth one (0 = off).
 - **ghoststrike_timeover_forceplant** - Force the bomb plant when the time is about to hit 0 to prevent trolls.
 
-#####Restrictions (Per concept):
+##### Restrictions (Per concept):
 
 - you are not (supposed to be) able to plant the bomb in locations where you are required to get boosted into. This is achieved by making collisions bouncy.
 - While the steps of invisible Counterterrorists are inaudible, any other sound like jumping is not (Cvar changeable).
