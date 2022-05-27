@@ -1,0 +1,69 @@
+"Phrases"
+{
+	"Trolling_NowVisible"
+	{
+		"chi" "T阵营玩家现在已经可以看到你的样子！"
+	}
+
+	"Trolling_NowHidden"
+	{
+		"chi" "你又重新隐身了"
+	}
+
+	"Bomb_DeployIn"
+	{
+		"#format" "{1:i}"
+		"chi" "炸弹将以{1}秒的时间被随机分配给T阵营玩家!"
+	}
+
+	"Bomb_ReceivedBy"
+	{
+		//name has received the bomb
+		"chi" "收到了C4！"
+	}
+
+	"Instructions_CT_1_Not_Invincible"
+	{
+		"chi" "你现在处于{GREEN}隐形状态{DEFAULT}，你的脚步{GREEN}T{DEFAULT}现在听不见。{RED}但你不是无敌的！{DEFAULT}"
+	}
+
+	"Instructions_CT_1_Invincible"
+	{
+		"chi" "你现在处于{GREEN}隐形状态{DEFAULT}，你的脚步{GREEN}T阵营玩家{DEFAULT}现在听不见。{RED}而且无敌！{DEFAULT}"
+	}
+
+	"Instructions_CT_2_NoSteps"
+	{
+		"chi" "你现在{RED}不能{DEFAULT}开枪，除非C4被安放！虽然听不到脚步声，但任何其他声音（如跳跃、梯子）都是{RED}可以{DEFAULT}听到的！"
+	}
+
+	"Instructions_CT_2_NoSounds"
+	{
+		"chi" "你现在{RED}不能{DEFAULT}开枪，除非C4被安放！T阵营玩家听不到你发出的任何声音。"
+	}
+
+	"Instructions_CT_TrollingAllowed"
+	{
+		"chi" "当你隐形的时候，你可以按下R键向T阵营玩家展示自己。"
+	}
+
+	"Instructions_T_1_Not_Invincible"
+	{
+		"chi" "{LIGHTBLUE}CT{DEFAULT}现在是{RED}隐身{DEFAULT}的，但是{GREEN}不是无敌的{DEFAULT}除非你放置了炸弹！"
+	}
+
+	"Instructions_T_1_Invincible"
+	{
+		"chi" "{LIGHTBLUE}CT{DEFAULT}是{RED}隐身{DEFAULT}和{RED}无敌的{DEFAULT}直到你放置炸弹！"
+	}
+
+	"Instructions_T_2_BombPlant"
+	{
+		"chi" "你可以把炸弹{GREEN}放在地图上任何{DEFAULT}的地方，但要记住，你旁边可能永远有一个{LIGHTBLUE}CT{RED}。"
+	}
+
+	"Cannot_Plant_Region"
+	{
+		"chi" "你不能在这里安放C4，因为之前在标记区域附近种植了炸弹。"
+	}
+}
